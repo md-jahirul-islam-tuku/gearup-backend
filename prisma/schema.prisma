@@ -11,3 +11,159 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// =============================
+// Enums
+// =============================
+
+enum Role {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum RentalStatus {
+  PLACED
+  CONFIRMED
+  PAID
+  PICKED_UP
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentProvider {
+  STRIPE
+  SSLCOMMERZ // If we use future
+}
+
+// =============================
+// User Model
+// =============================
+
+model User {
+  id           String        @id @default(uuid())
+  name         String        @db.VarChar(255)
+  email        String        @unique
+  password     String
+  role         Role          @default(CUSTOMER)
+  status       UserStatus    @default(ACTIVE)
+  profileImage String?
+  providedGear GearItem[]    @relation("ProviderGear")
+  rentalOrders RentalOrder[] @relation("CustomerRentalOrders")
+  reviews      Review[]      @relation("CustomerReviews")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("users")
+}
+
+// =============================
+// Category Model
+// =============================
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique @db.VarChar(255)
+  slug        String     @unique
+  description String?
+  gearItems   GearItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("categories")
+}
+
+// =============================
+// GearItem Model
+// =============================
+
+model GearItem {
+  id           String        @id @default(uuid())
+  name         String        @db.VarChar(255)
+  description  String        @db.Text
+  brand        String        @db.VarChar(255)
+  pricePerDay  Decimal       @db.Decimal(10, 2)
+  stock        Int
+  isAvailable  Boolean       @default(true)
+  images       String[]
+  providerId   String
+  provider     User          @relation("ProviderGear", fields: [providerId], references: [id])
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  rentalOrders RentalOrder[]
+  reviews      Review[]
+
+  @@map("gear_items")
+}
+
+// =============================
+// RentalOrder Model
+// =============================
+
+model RentalOrder {
+  id          String       @id @default(uuid())
+  customerId  String
+  customer    User         @relation("CustomerRentalOrders", fields: [customerId], references: [id])
+  gearItemId  String
+  gearItem    GearItem     @relation(fields: [gearItemId], references: [id])
+  quantity    Int
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Decimal      @db.Decimal(10, 2)
+  status      RentalStatus @default(PLACED)
+  payment     Payment?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("rental_orders")
+}
+
+// =============================
+// RentalOrder Model
+// =============================
+
+model Payment {
+  id            String          @id @default(uuid())
+  rentalOrderId String          @unique
+  rentalOrder   RentalOrder     @relation(fields: [rentalOrderId], references: [id])
+  transactionId String?         @unique
+  amount        Decimal         @db.Decimal(10, 2)
+  provider      PaymentProvider @default(STRIPE)
+  status        PaymentStatus   @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("payments")
+}
+
+// =============================
+// Review Model
+// =============================
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int
+  comment    String?  @db.Text
+  customerId String
+  customer   User     @relation("CustomerReviews", fields: [customerId], references: [id])
+  gearItemId String
+  gearItem   GearItem @relation(fields: [gearItemId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([customerId, gearItemId])
+  @@map("reviews")
+}
