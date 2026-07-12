@@ -5,3 +5,8 @@ export type TRegisterUser = {
   role: "CUSTOMER" | "PROVIDER";
   profileImage?: string;
 };
+
+export type TLoginUser = {
+  email: string;
+  password: string;
+};
