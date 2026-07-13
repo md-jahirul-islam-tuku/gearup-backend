@@ -17,6 +17,17 @@ const createGear = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllGears = catchAsync(async (req, res) => {
+  const result = await GearServices.getAllGears(req.query);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Gears retrieved successfully",
+    data: result,
+  });
+});
+
 export const GearControllers = {
   createGear,
+  getAllGears,
 };
