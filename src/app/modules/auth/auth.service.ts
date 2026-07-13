@@ -105,7 +105,6 @@ const refreshToken = async (token: string) => {
   }
 
   const decoded = verifyToken(token, config.jwt_refresh_secret) as JwtPayload;
-  console.log(decoded);
   const { userId } = decoded as JwtPayload;
 
   const user = await prisma.user.findUnique({

@@ -3,6 +3,14 @@ import { catchAsync } from "../../utils/catchAsync";
 import { AuthServices } from "./auth.service";
 import sendResponse from "../../utils/sendResponse";
 import { Request, Response } from "express";
+import config from "../../config";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: config.node_env === "production",
+  sameSite:
+    config.node_env === "production" ? ("none" as const) : ("lax" as const),
+};
 
 const registerUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthServices.registerUser(req.body);
@@ -17,12 +25,7 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
 const loginUser = catchAsync(async (req, res) => {
   const { accessToken, refreshToken } = await AuthServices.loginUser(req.body);
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 day
-  });
+  res.cookie("refreshToken", refreshToken, cookieOptions);
 
   sendResponse(res, httpStatus.OK, {
     success: true,
@@ -46,8 +49,19 @@ const refreshToken = catchAsync(async (req, res) => {
   });
 });
 
+const logout = catchAsync(async (_req: Request, res: Response) => {
+  res.clearCookie("refreshToken", cookieOptions);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Logged out successfully",
+    data: null,
+  });
+});
+
 export const AuthControllers = {
   registerUser,
   loginUser,
   refreshToken,
+  logout,
 };

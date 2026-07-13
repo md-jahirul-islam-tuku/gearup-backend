@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export default {
+  node_env: process.env.NODE_ENV || "development",
   port: process.env.PORT,
   database_url: process.env.DATABASE_URL,
   app_url: process.env.APP_URL,
