@@ -1,4 +1,4 @@
-import httpStatus from 'http-status';
+import httpStatus from "http-status";
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { CategoryServices } from "./category.service";

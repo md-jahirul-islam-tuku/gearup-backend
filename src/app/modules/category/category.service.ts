@@ -1,4 +1,4 @@
-import httpStatus from 'http-status';
+import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 import generateSlug from "../../utils/generateSlug";
@@ -32,10 +32,7 @@ const createCategory = async (payload: {
   });
 
   if (isSlugExists) {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "Category slug already exists",
-    );
+    throw new AppError(httpStatus.CONFLICT, "Category slug already exists");
   }
 
   const category = await prisma.category.create({

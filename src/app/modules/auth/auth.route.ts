@@ -6,6 +6,7 @@ import {
   registerValidationSchema,
 } from "./auth.validation";
 import validateRequest from "../../middlewares/validateRequest";
+import auth from "../../middlewares/auth";
 
 const router = Router();
 
@@ -20,6 +21,8 @@ router.post(
   validateRequest(loginValidationSchema),
   AuthControllers.loginUser,
 );
+
+router.get("/me", auth(), AuthControllers.getMe);
 
 router.post("/logout", AuthControllers.logout);
 

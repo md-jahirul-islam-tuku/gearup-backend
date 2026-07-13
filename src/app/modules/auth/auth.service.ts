@@ -99,6 +99,23 @@ const loginUser = async (payload: TLoginUser) => {
   };
 };
 
+const getMe = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    omit: {
+      password: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  return user;
+};
+
 const refreshToken = async (token: string) => {
   if (!token) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing");
@@ -141,5 +158,6 @@ const refreshToken = async (token: string) => {
 export const AuthServices = {
   registerUser,
   loginUser,
+  getMe,
   refreshToken,
 };
