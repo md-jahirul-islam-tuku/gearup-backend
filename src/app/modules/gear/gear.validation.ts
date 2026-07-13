@@ -17,3 +17,15 @@ export const createGearValidationSchema = z.object({
     images: z.array(z.url()).min(1),
   }),
 });
+
+export const updateGearValidationSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(3).max(150).optional(),
+    description: z.string().trim().min(20).optional(),
+    brand: z.string().trim().min(2).max(100).optional(),
+    pricePerDay: z.number().positive().optional(),
+    stock: z.number().int().min(0).optional(),
+    categoryId: z.string().uuid().optional(),
+    images: z.array(z.string().url()).optional(),
+  }),
+});

@@ -3,8 +3,8 @@ import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 
-import { TCreateGear } from "./gear.interface";
-import { UserStatus } from "../../../../generated/prisma/enums";
+import { TCreateGear, TCurrentUser, TUpdateGear } from "./gear.interface";
+import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
 import { Prisma } from "../../../../generated/prisma/client";
 
@@ -62,6 +62,8 @@ const getAllGears = async (query: Record<string, unknown>) => {
   const sortBy = query.sortBy as string | undefined;
   const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
 
+  const brand = query.brand as string | undefined;
+
   const andConditions: Prisma.GearItemWhereInput[] = [];
 
   // Pagination
@@ -84,6 +86,16 @@ const getAllGears = async (query: Record<string, unknown>) => {
           },
         },
       ],
+    });
+  }
+
+  // Brand Filter
+  if (brand) {
+    andConditions.push({
+      brand: {
+        contains: brand,
+        mode: "insensitive",
+      },
     });
   }
 
@@ -172,7 +184,147 @@ const getAllGears = async (query: Record<string, unknown>) => {
   };
 };
 
+const getSingleGear = async (id: string) => {
+  const gear = await prisma.gearItem.findUnique({
+    where: {
+      id,
+    },
+
+    include: {
+      category: true,
+
+      provider: {
+        omit: {
+          password: true,
+        },
+      },
+
+      reviews: {
+        include: {
+          customer: {
+            omit: {
+              password: true,
+            },
+          },
+        },
+
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+    },
+  });
+
+  if (!gear) {
+    throw new AppError(httpStatus.NOT_FOUND, "Gear not found");
+  }
+
+  return gear;
+};
+
+const updateGear = async (
+  id: string,
+  payload: TUpdateGear,
+  currentUser: TCurrentUser,
+) => {
+  const gear = await prisma.gearItem.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!gear) {
+    throw new AppError(httpStatus.NOT_FOUND, "Gear not found");
+  }
+
+  // Authorization
+  if (
+    currentUser.role !== Role.ADMIN &&
+    gear.providerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to update this gear",
+    );
+  }
+
+  // Category Validation
+  if (payload.categoryId) {
+    const category = await prisma.category.findUnique({
+      where: {
+        id: payload.categoryId,
+      },
+    });
+
+    if (!category) {
+      throw new AppError(httpStatus.NOT_FOUND, "Category not found");
+    }
+  }
+
+  const updateData: TUpdateGear & {
+    isAvailable?: boolean;
+  } = {
+    ...payload,
+  };
+
+  // Auto update availability
+  if (payload.stock !== undefined) {
+    updateData.isAvailable = payload.stock > 0;
+  }
+
+  const updatedGear = await prisma.gearItem.update({
+    where: {
+      id,
+    },
+    data: updateData,
+    include: {
+      category: true,
+      provider: {
+        omit: {
+          password: true,
+        },
+      },
+    },
+  });
+
+  return updatedGear;
+};
+
+const deleteGear = async (id: string, currentUser: TCurrentUser) => {
+  const gear = await prisma.gearItem.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!gear) {
+    throw new AppError(httpStatus.NOT_FOUND, "Gear not found");
+  }
+
+  // Authorization
+  if (
+    currentUser.role !== Role.ADMIN &&
+    gear.providerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to delete this gear",
+    );
+  }
+
+  await prisma.gearItem.delete({
+    where: {
+      id,
+    },
+  });
+
+  return null;
+};
+
 export const GearServices = {
   createGear,
   getAllGears,
+  getSingleGear,
+  updateGear,
+  deleteGear,
 };
