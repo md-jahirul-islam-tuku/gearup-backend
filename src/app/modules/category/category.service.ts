@@ -69,8 +69,74 @@ const getSingleCategory = async (id: string) => {
   return category;
 };
 
+const updateCategory = async (
+  id: string,
+  payload: {
+    name?: string;
+    description?: string;
+  },
+) => {
+  const existingCategory = await prisma.category.findUnique({
+    where: { id },
+  });
+
+  if (!existingCategory) {
+    throw new AppError(httpStatus.NOT_FOUND, "Category not found");
+  }
+
+  const updateData: {
+    name?: string;
+    slug?: string;
+    description?: string;
+  } = {
+    description: payload.description,
+  };
+
+  if (payload.name) {
+    const duplicateName = await prisma.category.findFirst({
+      where: {
+        name: payload.name,
+        NOT: {
+          id,
+        },
+      },
+    });
+
+    if (duplicateName) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "Category already exists with this name",
+      );
+    }
+
+    const slug = generateSlug(payload.name);
+
+    const duplicateSlug = await prisma.category.findFirst({
+      where: {
+        slug,
+        NOT: {
+          id,
+        },
+      },
+    });
+
+    if (duplicateSlug) {
+      throw new AppError(httpStatus.CONFLICT, "Category slug already exists");
+    }
+
+    updateData.name = payload.name;
+    updateData.slug = slug;
+  }
+
+  return prisma.category.update({
+    where: { id },
+    data: updateData,
+  });
+};
+
 export const CategoryServices = {
   createCategory,
   getAllCategories,
   getSingleCategory,
+  updateCategory,
 };
