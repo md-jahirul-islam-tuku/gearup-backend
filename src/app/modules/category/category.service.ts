@@ -45,7 +45,7 @@ const createCategory = async (payload: {
   return category;
 };
 
-const getAllCategories = async (_query: Record<string, unknown>,) => {
+const getAllCategories = async (_query: Record<string, unknown>) => {
   const categories = await prisma.category.findMany({
     orderBy: {
       createdAt: "desc",
@@ -55,7 +55,22 @@ const getAllCategories = async (_query: Record<string, unknown>,) => {
   return categories;
 };
 
+const getSingleCategory = async (id: string) => {
+  const category = await prisma.category.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!category) {
+    throw new AppError(httpStatus.NOT_FOUND, "Category not found");
+  }
+
+  return category;
+};
+
 export const CategoryServices = {
   createCategory,
   getAllCategories,
+  getSingleCategory,
 };
