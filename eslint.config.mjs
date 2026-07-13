@@ -33,4 +33,11 @@ export default [
       ],
     },
   },
+
+  {
+    files: ["src/app/types/**/*.d.ts"],
+    rules: {
+      "@typescript-eslint/no-namespace": "off",
+    },
+  },
 ];

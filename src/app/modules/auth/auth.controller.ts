@@ -15,11 +15,33 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const loginUser = catchAsync(async (req, res) => {
-  const result = await AuthServices.loginUser(req.body);
+  const { accessToken, refreshToken } = await AuthServices.loginUser(req.body);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 day
+  });
 
   sendResponse(res, httpStatus.OK, {
     success: true,
     message: "User logged in successfully",
+    data: {
+      accessToken,
+      refreshToken,
+    },
+  });
+});
+
+const refreshToken = catchAsync(async (req, res) => {
+  const token = req.cookies.refreshToken;
+
+  const result = await AuthServices.refreshToken(token);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Access token generated successfully",
     data: result,
   });
 });
@@ -27,4 +49,5 @@ const loginUser = catchAsync(async (req, res) => {
 export const AuthControllers = {
   registerUser,
   loginUser,
+  refreshToken,
 };
