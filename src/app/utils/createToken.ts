@@ -12,7 +12,7 @@
 
 // export default createToken;
 
-import jwt,{ SignOptions, Secret } from "jsonwebtoken";
+import jwt, { SignOptions, Secret } from "jsonwebtoken";
 
 export const createToken = (
   payload: object,

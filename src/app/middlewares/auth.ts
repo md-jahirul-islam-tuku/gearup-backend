@@ -8,16 +8,11 @@ import { catchAsync } from "../utils/catchAsync";
 import verifyToken from "../utils/verifyToken";
 import { Role, UserStatus } from "../../../generated/prisma/enums";
 
-const auth =
-  (...requiredRoles: Role[]) =>
+const auth = (...requiredRoles: Role[]) =>
   catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError(
-        httpStatus.UNAUTHORIZED,
-        "You are not authorized",
-      );
+      throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized");
     }
 
     const token = authHeader.split(" ")[1];
@@ -36,10 +31,7 @@ const auth =
     });
 
     if (!user) {
-      throw new AppError(
-        httpStatus.NOT_FOUND,
-        "User not found",
-      );
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
 
     if (user.status === UserStatus.SUSPENDED) {
@@ -49,10 +41,7 @@ const auth =
       );
     }
 
-    if (
-      requiredRoles.length > 0 &&
-      !requiredRoles.includes(user.role)
-    ) {
+    if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
       throw new AppError(
         httpStatus.FORBIDDEN,
         "You are forbidden to access this resource",
