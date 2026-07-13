@@ -134,9 +134,36 @@ const updateCategory = async (
   });
 };
 
+const deleteCategory = async (id: string) => {
+  const category = await prisma.category.findUnique({
+    where: { id },
+    include: {
+      gearItems: true,
+    },
+  });
+
+  if (!category) {
+    throw new AppError(httpStatus.NOT_FOUND, "Category not found");
+  }
+
+  if (category.gearItems.length > 0) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot delete category because it contains gear items",
+    );
+  }
+
+  await prisma.category.delete({
+    where: { id },
+  });
+
+  return null;
+};
+
 export const CategoryServices = {
   createCategory,
   getAllCategories,
   getSingleCategory,
   updateCategory,
+  deleteCategory,
 };

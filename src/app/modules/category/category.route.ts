@@ -21,6 +21,8 @@ router.patch(
   CategoryControllers.updateCategory,
 );
 
+router.delete("/:id", auth(Role.ADMIN), CategoryControllers.deleteCategory);
+
 router.post(
   "/",
   auth(Role.ADMIN),
