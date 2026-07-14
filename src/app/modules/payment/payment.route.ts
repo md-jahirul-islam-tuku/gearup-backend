@@ -14,4 +14,10 @@ router.post(
   PaymentControllers.createCheckoutSession,
 );
 
+router.get(
+  "/my-payments",
+  auth(Role.CUSTOMER),
+  PaymentControllers.getMyPayments,
+);
+
 export const PaymentRoutes = router;

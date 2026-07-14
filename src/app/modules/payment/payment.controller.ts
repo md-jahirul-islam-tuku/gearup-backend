@@ -28,7 +28,22 @@ const stripeWebhook = async (req: Request, res: Response) => {
   });
 };
 
+const getMyPayments = catchAsync(async (req, res) => {
+  const result = await PaymentServices.getMyPayments(
+    req.user!.userId,
+    req.query,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Payment history retrieved successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 export const PaymentControllers = {
   createCheckoutSession,
   stripeWebhook,
+  getMyPayments,
 };

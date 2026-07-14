@@ -11,6 +11,7 @@ import {
 } from "../../../../generated/prisma/enums";
 import { TCurrentUser } from "../../types/current-user";
 import Stripe from "stripe";
+import { calculatePagination } from "../../utils/pagination";
 
 const createCheckoutSession = async (
   rentalId: string,
@@ -182,7 +183,76 @@ const stripeWebhook = async (rawBody: Buffer, signature: string) => {
   }
 };
 
+const getMyPayments = async (
+  userId: string,
+  query: {
+    page?: string;
+    limit?: string;
+    status?: PaymentStatus;
+  },
+) => {
+  const { page, limit, skip } = calculatePagination(query);
+
+  const whereClause = {
+    rentalOrder: {
+      customerId: userId,
+    },
+
+    ...(query.status && {
+      status: query.status,
+    }),
+  };
+
+  const [payments, total] = await prisma.$transaction([
+    prisma.payment.findMany({
+      where: whereClause,
+
+      include: {
+        rentalOrder: {
+          include: {
+            gearItem: {
+              include: {
+                category: true,
+
+                provider: {
+                  omit: {
+                    password: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+
+      take: limit,
+    }),
+
+    prisma.payment.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: payments,
+  };
+};
+
 export const PaymentServices = {
   createCheckoutSession,
   stripeWebhook,
+  getMyPayments,
 };
