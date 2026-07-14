@@ -292,9 +292,140 @@ const getProviderRentals = async (
   };
 };
 
+const updateRentalStatus = async (
+  rentalId: string,
+  status: RentalStatus,
+  currentUser: TCurrentUser,
+) => {
+  const rental = await prisma.rentalOrder.findUnique({
+    where: {
+      id: rentalId,
+    },
+    include: {
+      gearItem: true,
+    },
+  });
+
+  if (!rental) {
+    throw new AppError(httpStatus.NOT_FOUND, "Rental order not found");
+  }
+
+  // Only provider who owns the gear can update status
+  if (
+    currentUser.role !== Role.ADMIN &&
+    rental.gearItem.providerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to update this rental",
+    );
+  }
+
+  // Rental already completed
+  if (rental.status === RentalStatus.RETURNED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Rental has already been returned",
+    );
+  }
+
+  // Allowed status transitions
+  const allowedTransitions: Record<RentalStatus, RentalStatus | null> = {
+    PLACED: RentalStatus.CONFIRMED,
+    CONFIRMED: RentalStatus.PICKED_UP,
+    PICKED_UP: RentalStatus.RETURNED,
+    RETURNED: null,
+    CANCELLED: null,
+  };
+
+  if (allowedTransitions[rental.status] !== status) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Invalid status transition from ${rental.status} to ${status}`,
+    );
+  }
+
+  // RETURNED -> Update rental + restore stock
+  if (status === RentalStatus.RETURNED) {
+    return await prisma.$transaction(async (tx) => {
+      await tx.gearItem.update({
+        where: {
+          id: rental.gearItemId,
+        },
+        data: {
+          stock: {
+            increment: rental.quantity,
+          },
+          isAvailable: true,
+        },
+      });
+
+      const updatedRental = await tx.rentalOrder.update({
+        where: {
+          id: rental.id,
+        },
+        data: {
+          status,
+        },
+        include: {
+          customer: {
+            omit: {
+              password: true,
+            },
+          },
+          gearItem: {
+            include: {
+              category: true,
+              provider: {
+                omit: {
+                  password: true,
+                },
+              },
+            },
+          },
+          payment: true,
+        },
+      });
+
+      return updatedRental;
+    });
+  }
+
+  // CONFIRMED / PICKED_UP
+  const updatedRental = await prisma.rentalOrder.update({
+    where: {
+      id: rental.id,
+    },
+    data: {
+      status,
+    },
+    include: {
+      customer: {
+        omit: {
+          password: true,
+        },
+      },
+      gearItem: {
+        include: {
+          category: true,
+          provider: {
+            omit: {
+              password: true,
+            },
+          },
+        },
+      },
+      payment: true,
+    },
+  });
+
+  return updatedRental;
+};
+
 export const RentalServices = {
   createRental,
   getMyRentals,
   getSingleRental,
   getProviderRentals,
+  updateRentalStatus,
 };

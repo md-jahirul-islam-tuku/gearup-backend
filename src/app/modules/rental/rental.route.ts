@@ -2,7 +2,10 @@ import { Router } from "express";
 import auth from "../../middlewares/auth";
 import { Role } from "../../../../generated/prisma/enums";
 import validateRequest from "../../middlewares/validateRequest";
-import { createRentalValidationSchema } from "./rental.validation";
+import {
+  createRentalValidationSchema,
+  updateRentalStatusValidationSchema,
+} from "./rental.validation";
 import { RentalControllers } from "./rental.controller";
 
 const router = Router();
@@ -26,6 +29,13 @@ router.get(
   "/:id",
   auth(Role.CUSTOMER, Role.PROVIDER, Role.ADMIN),
   RentalControllers.getSingleRental,
+);
+
+router.patch(
+  "/:id/status",
+  auth(Role.PROVIDER),
+  validateRequest(updateRentalStatusValidationSchema),
+  RentalControllers.updateRentalStatus,
 );
 
 export const RentalRoutes = router;

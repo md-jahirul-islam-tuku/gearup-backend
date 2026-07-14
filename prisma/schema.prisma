@@ -30,7 +30,6 @@ enum UserStatus {
 enum RentalStatus {
   PLACED
   CONFIRMED
-  PAID
   PICKED_UP
   RETURNED
   CANCELLED
@@ -38,7 +37,7 @@ enum RentalStatus {
 
 enum PaymentStatus {
   PENDING
-  COMPLETED
+  PAID
   FAILED
 }
 
