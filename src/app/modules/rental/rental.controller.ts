@@ -27,7 +27,36 @@ const getMyRentals = catchAsync(async (req, res) => {
   });
 });
 
+const getSingleRental = catchAsync(async (req, res) => {
+  const result = await RentalServices.getSingleRental(
+    req.params.id as string,
+    req.user!,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Rental retrieved successfully",
+    data: result,
+  });
+});
+
+const getProviderRentals = catchAsync(async (req, res) => {
+  const result = await RentalServices.getProviderRentals(
+    req.user!.userId,
+    req.query,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Provider rental orders retrieved successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 export const RentalControllers = {
   createRental,
   getMyRentals,
+  getSingleRental,
+  getProviderRentals,
 };

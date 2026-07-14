@@ -16,4 +16,16 @@ router.post(
 
 router.get("/my-rentals", auth(Role.CUSTOMER), RentalControllers.getMyRentals);
 
+router.get(
+  "/provider",
+  auth(Role.PROVIDER),
+  RentalControllers.getProviderRentals,
+);
+
+router.get(
+  "/:id",
+  auth(Role.CUSTOMER, Role.PROVIDER, Role.ADMIN),
+  RentalControllers.getSingleRental,
+);
+
 export const RentalRoutes = router;

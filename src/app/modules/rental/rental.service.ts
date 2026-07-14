@@ -2,8 +2,9 @@ import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 import { TCreateRental, TGetMyRentalsQuery } from "./rental.interface";
-import { RentalStatus } from "../../../../generated/prisma/enums";
+import { RentalStatus, Role } from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
+import { TCurrentUser } from "../../types/current-user";
 
 const createRental = async (payload: TCreateRental, userId: string) => {
   const gear = await prisma.gearItem.findUnique({
@@ -161,7 +162,139 @@ const getMyRentals = async (userId: string, query: TGetMyRentalsQuery) => {
   };
 };
 
+const getSingleRental = async (rentalId: string, currentUser: TCurrentUser) => {
+  const rental = await prisma.rentalOrder.findUnique({
+    where: {
+      id: rentalId,
+    },
+
+    include: {
+      customer: {
+        omit: {
+          password: true,
+        },
+      },
+
+      gearItem: {
+        include: {
+          category: true,
+
+          provider: {
+            omit: {
+              password: true,
+            },
+          },
+        },
+      },
+
+      payment: true,
+    },
+  });
+
+  if (!rental) {
+    throw new AppError(httpStatus.NOT_FOUND, "Rental order not found");
+  }
+
+  // Admin can access any rental
+  if (currentUser.role === Role.ADMIN) {
+    return rental;
+  }
+
+  // Customer can access only their own rentals
+  if (
+    currentUser.role === Role.CUSTOMER &&
+    rental.customerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to access this rental order",
+    );
+  }
+
+  // Provider can access only rentals of their own gear
+  if (
+    currentUser.role === Role.PROVIDER &&
+    rental.gearItem.providerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to access this rental order",
+    );
+  }
+
+  return rental;
+};
+
+const getProviderRentals = async (
+  providerId: string,
+  query: TGetMyRentalsQuery,
+) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const whereClause = {
+    gearItem: {
+      providerId,
+    },
+    ...(query.status && {
+      status: query.status as RentalStatus,
+    }),
+  };
+
+  const [rentals, total] = await prisma.$transaction([
+    prisma.rentalOrder.findMany({
+      where: whereClause,
+
+      include: {
+        customer: {
+          omit: {
+            password: true,
+          },
+        },
+
+        gearItem: {
+          include: {
+            category: true,
+
+            provider: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+        },
+
+        payment: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.rentalOrder.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: rentals,
+  };
+};
+
 export const RentalServices = {
   createRental,
   getMyRentals,
+  getSingleRental,
+  getProviderRentals,
 };

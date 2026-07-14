@@ -3,10 +3,11 @@ import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 
-import { TCreateGear, TCurrentUser, TUpdateGear } from "./gear.interface";
+import { TCreateGear, TUpdateGear } from "./gear.interface";
 import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
 import { Prisma } from "../../../../generated/prisma/client";
+import { TCurrentUser } from "../../types/current-user";
 
 const createGear = async (payload: TCreateGear, providerId: string) => {
   // Provider exists?
