@@ -29,7 +29,31 @@ const updateUserStatus = catchAsync(async (req, res) => {
   });
 });
 
+const getAllGear = catchAsync(async (req, res) => {
+  const result = await AdminServices.getAllGear(req.query);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Gear retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getAllRentals = catchAsync(async (req, res) => {
+  const result = await AdminServices.getAllRentals(req.query);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Rental orders retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const AdminControllers = {
   getAllUsers,
   updateUserStatus,
+  getAllGear,
+  getAllRentals,
 };

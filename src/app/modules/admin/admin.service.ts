@@ -1,6 +1,11 @@
 import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
-import { TAdminQuery, TUpdateUserStatus } from "./admin.interface";
+import {
+  TAdminGearQuery,
+  TAdminQuery,
+  TAdminRentalQuery,
+  TUpdateUserStatus,
+} from "./admin.interface";
 import { Prisma, Role, UserStatus } from "../../../../generated/prisma/client";
 import AppError from "../../errors/AppError";
 
@@ -117,7 +122,146 @@ const updateUserStatus = async (
   return updatedUser;
 };
 
+const getAllGear = async (query: TAdminGearQuery) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.GearItemWhereInput = {};
+
+  if (query.searchTerm) {
+    where.OR = [
+      {
+        name: {
+          contains: query.searchTerm,
+          mode: "insensitive",
+        },
+      },
+      {
+        brand: {
+          contains: query.searchTerm,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  if (query.categoryId) {
+    where.categoryId = query.categoryId;
+  }
+
+  if (query.providerId) {
+    where.providerId = query.providerId;
+  }
+
+  if (query.isAvailable !== undefined) {
+    where.isAvailable = query.isAvailable === "true";
+  }
+
+  const [gears, total] = await prisma.$transaction([
+    prisma.gearItem.findMany({
+      where,
+
+      include: {
+        category: true,
+
+        provider: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.gearItem.count({
+      where,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: gears,
+  };
+};
+
+const getAllRentals = async (query: TAdminRentalQuery) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.RentalOrderWhereInput = {};
+
+  if (query.status) {
+    where.status = query.status;
+  }
+
+  const [rentals, total] = await prisma.$transaction([
+    prisma.rentalOrder.findMany({
+      where,
+
+      include: {
+        customer: {
+          omit: {
+            password: true,
+          },
+        },
+
+        gearItem: {
+          include: {
+            category: true,
+
+            provider: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+        },
+
+        payment: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.rentalOrder.count({
+      where,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: rentals,
+  };
+};
+
 export const AdminServices = {
   getAllUsers,
   updateUserStatus,
+  getAllGear,
+  getAllRentals,
 };

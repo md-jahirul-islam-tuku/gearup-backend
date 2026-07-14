@@ -1,4 +1,4 @@
-import { UserStatus } from "../../../../generated/prisma/enums";
+import { RentalStatus, UserStatus } from "../../../../generated/prisma/enums";
 
 export type TAdminQuery = {
   page?: string;
@@ -10,4 +10,19 @@ export type TAdminQuery = {
 
 export type TUpdateUserStatus = {
   status: UserStatus;
+};
+
+export type TAdminGearQuery = {
+  page?: string;
+  limit?: string;
+  searchTerm?: string;
+  categoryId?: string;
+  providerId?: string;
+  isAvailable?: string;
+};
+
+export type TAdminRentalQuery = {
+  page?: string;
+  limit?: string;
+  status?: RentalStatus;
 };

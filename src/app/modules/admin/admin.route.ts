@@ -9,8 +9,8 @@ router.get("/users", auth(Role.ADMIN), AdminControllers.getAllUsers);
 
 router.patch("/users/:id", auth(Role.ADMIN), AdminControllers.updateUserStatus);
 
-// router.get("/gear", auth(Role.ADMIN), AdminControllers.getAllGear);
+router.get("/gear", auth(Role.ADMIN), AdminControllers.getAllGear);
 
-// router.get("/rentals", auth(Role.ADMIN), AdminControllers.getAllRentals);
+router.get("/rentals", auth(Role.ADMIN), AdminControllers.getAllRentals);
 
 export const AdminRoutes = router;
