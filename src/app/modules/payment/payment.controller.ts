@@ -42,8 +42,22 @@ const getMyPayments = catchAsync(async (req, res) => {
   });
 });
 
+const getSinglePayment = catchAsync(async (req, res) => {
+  const result = await PaymentServices.getSinglePayment(
+    req.params.id as string,
+    req.user!,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Payment retrieved successfully",
+    data: result,
+  });
+});
+
 export const PaymentControllers = {
   createCheckoutSession,
   stripeWebhook,
   getMyPayments,
+  getSinglePayment,
 };

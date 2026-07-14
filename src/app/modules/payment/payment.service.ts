@@ -8,10 +8,12 @@ import AppError from "../../errors/AppError";
 import {
   PaymentProvider,
   PaymentStatus,
+  Role,
 } from "../../../../generated/prisma/enums";
 import { TCurrentUser } from "../../types/current-user";
 import Stripe from "stripe";
 import { calculatePagination } from "../../utils/pagination";
+import { JwtPayload } from "jsonwebtoken";
 
 const createCheckoutSession = async (
   rentalId: string,
@@ -251,8 +253,67 @@ const getMyPayments = async (
   };
 };
 
+const getSinglePayment = async (paymentId: string, currentUser: JwtPayload) => {
+  const payment = await prisma.payment.findUnique({
+    where: {
+      id: paymentId,
+    },
+
+    include: {
+      rentalOrder: {
+        include: {
+          gearItem: {
+            include: {
+              category: true,
+
+              provider: {
+                omit: {
+                  password: true,
+                },
+              },
+            },
+          },
+
+          customer: {
+            omit: {
+              password: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Payment not found");
+  }
+
+  if (
+    currentUser.role === Role.CUSTOMER &&
+    payment.rentalOrder.customerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to view this payment",
+    );
+  }
+
+  if (
+    currentUser.role === Role.PROVIDER &&
+    payment.rentalOrder.gearItem.providerId !== currentUser.userId
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to view this payment",
+    );
+  }
+
+  return payment;
+};
+
 export const PaymentServices = {
   createCheckoutSession,
   stripeWebhook,
   getMyPayments,
+  getSinglePayment,
 };
