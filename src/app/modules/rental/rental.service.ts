@@ -1,8 +1,9 @@
 import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
-import { TCreateRental } from "./rental.interface";
+import { TCreateRental, TGetMyRentalsQuery } from "./rental.interface";
 import { RentalStatus } from "../../../../generated/prisma/enums";
+import { calculatePagination } from "../../utils/pagination";
 
 const createRental = async (payload: TCreateRental, userId: string) => {
   const gear = await prisma.gearItem.findUnique({
@@ -105,6 +106,62 @@ const createRental = async (payload: TCreateRental, userId: string) => {
   return result;
 };
 
+const getMyRentals = async (userId: string, query: TGetMyRentalsQuery) => {
+  const { page, limit, skip } = calculatePagination(query);
+
+  const whereClause = {
+    customerId: userId,
+    ...(query.status && {
+      status: query.status as RentalStatus,
+    }),
+  };
+
+  const [rentals, total] = await prisma.$transaction([
+    prisma.rentalOrder.findMany({
+      where: whereClause,
+
+      include: {
+        gearItem: {
+          include: {
+            category: true,
+
+            provider: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+        },
+
+        payment: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.rentalOrder.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: rentals,
+  };
+};
+
 export const RentalServices = {
   createRental,
+  getMyRentals,
 };

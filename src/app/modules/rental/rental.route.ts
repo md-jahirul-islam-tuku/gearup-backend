@@ -14,4 +14,6 @@ router.post(
   RentalControllers.createRental,
 );
 
+router.get("/my-rentals", auth(Role.CUSTOMER), RentalControllers.getMyRentals);
+
 export const RentalRoutes = router;

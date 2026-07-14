@@ -4,3 +4,9 @@ export type TCreateRental = {
   startDate: Date;
   endDate: Date;
 };
+
+export type TGetMyRentalsQuery = {
+  page?: string;
+  limit?: string;
+  status?: string;
+};
