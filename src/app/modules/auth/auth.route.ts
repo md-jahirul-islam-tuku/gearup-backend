@@ -2,11 +2,14 @@ import { Router } from "express";
 
 import { AuthControllers } from "./auth.controller";
 import {
+  changePasswordValidationSchema,
   loginValidationSchema,
   registerValidationSchema,
+  updateProfileValidationSchema,
 } from "./auth.validation";
 import validateRequest from "../../middlewares/validateRequest";
 import auth from "../../middlewares/auth";
+import { Role } from "../../../../generated/prisma/enums";
 
 const router = Router();
 
@@ -23,6 +26,20 @@ router.post(
 );
 
 router.get("/me", auth(), AuthControllers.getMe);
+
+router.patch(
+  "/me",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.PROVIDER),
+  validateRequest(updateProfileValidationSchema),
+  AuthControllers.updateMyProfile,
+);
+
+router.patch(
+  "/change-password",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.PROVIDER),
+  validateRequest(changePasswordValidationSchema),
+  AuthControllers.changePassword,
+);
 
 router.post("/logout", AuthControllers.logout);
 

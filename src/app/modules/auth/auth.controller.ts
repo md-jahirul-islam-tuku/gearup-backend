@@ -50,6 +50,26 @@ const getMe = catchAsync(async (req, res) => {
   });
 });
 
+const updateMyProfile = catchAsync(async (req, res) => {
+  const result = await AuthServices.updateMyProfile(req.user!.userId, req.body);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Profile updated successfully",
+    data: result,
+  });
+});
+
+const changePassword = catchAsync(async (req, res) => {
+  await AuthServices.changePassword(req.user!.userId, req.body);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Password changed successfully",
+    data: null,
+  });
+});
+
 const refreshToken = catchAsync(async (req, res) => {
   const token = req.cookies.refreshToken;
 
@@ -76,6 +96,8 @@ export const AuthControllers = {
   registerUser,
   loginUser,
   getMe,
+  updateMyProfile,
+  changePassword,
   refreshToken,
   logout,
 };

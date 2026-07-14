@@ -4,7 +4,12 @@ import { JwtPayload, SignOptions } from "jsonwebtoken";
 import config from "../../config";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
-import { TLoginUser, TRegisterUser } from "./auth.interface";
+import {
+  TChangePassword,
+  TLoginUser,
+  TRegisterUser,
+  TUpdateProfile,
+} from "./auth.interface";
 import { UserStatus } from "../../../../generated/prisma/enums";
 import verifyToken from "../../utils/verifyToken";
 import { createToken } from "../../utils/createToken";
@@ -116,6 +121,84 @@ const getMe = async (userId: string) => {
   return user;
 };
 
+const updateMyProfile = async (userId: string, payload: TUpdateProfile) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+
+    data: {
+      ...payload,
+    },
+
+    omit: {
+      password: true,
+    },
+  });
+
+  return updatedUser;
+};
+
+const changePassword = async (userId: string, payload: TChangePassword) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const isPasswordMatched = await bcrypt.compare(
+    payload.oldPassword,
+    user.password,
+  );
+
+  if (!isPasswordMatched) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Old password is incorrect");
+  }
+
+  const isSamePassword = await bcrypt.compare(
+    payload.newPassword,
+    user.password,
+  );
+
+  if (isSamePassword) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "New password must be different from the old password",
+    );
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    payload.newPassword,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+
+    data: {
+      password: hashedPassword,
+    },
+  });
+
+  return null;
+};
+
 const refreshToken = async (token: string) => {
   if (!token) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing");
@@ -159,5 +242,7 @@ export const AuthServices = {
   registerUser,
   loginUser,
   getMe,
+  updateMyProfile,
+  changePassword,
   refreshToken,
 };
