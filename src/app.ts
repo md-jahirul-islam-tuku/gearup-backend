@@ -5,6 +5,7 @@ import config from "./app/config";
 import { notFound } from "./app/middlewares/notFound";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import router from "./app/routes";
+import paymentWebhookRouter from "./app/modules/payment/payment.webhook.route";
 
 const app = express();
 
@@ -13,6 +14,12 @@ app.use(
     origin: config.app_url,
     credentials: true,
   }),
+);
+
+app.use(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  paymentWebhookRouter,
 );
 
 app.use(express.json());

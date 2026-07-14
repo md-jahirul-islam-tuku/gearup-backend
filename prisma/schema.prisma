@@ -135,16 +135,17 @@ model RentalOrder {
 // =============================
 
 model Payment {
-  id            String          @id @default(uuid())
-  rentalOrderId String          @unique
-  rentalOrder   RentalOrder     @relation(fields: [rentalOrderId], references: [id])
-  transactionId String?         @unique
-  amount        Decimal         @db.Decimal(10, 2)
-  provider      PaymentProvider @default(STRIPE)
-  status        PaymentStatus   @default(PENDING)
-  paidAt        DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id              String          @id @default(uuid())
+  rentalOrderId   String          @unique
+  rentalOrder     RentalOrder     @relation(fields: [rentalOrderId], references: [id])
+  stripeSessionId String?         @unique
+  transactionId   String?         @unique
+  amount          Decimal         @db.Decimal(10, 2)
+  provider        PaymentProvider @default(STRIPE)
+  status          PaymentStatus   @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@map("payments")
 }

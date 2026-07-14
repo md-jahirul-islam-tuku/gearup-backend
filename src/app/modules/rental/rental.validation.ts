@@ -17,6 +17,7 @@ export const updateRentalStatusValidationSchema = z.object({
       RentalStatus.CONFIRMED,
       RentalStatus.PICKED_UP,
       RentalStatus.RETURNED,
+      RentalStatus.CANCELLED,
     ]),
   }),
 });
