@@ -141,7 +141,7 @@ src
 ### Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/gearup-backend.git
+git clone https://github.com/md-jahirul-islam-tuku/gearup-backend.git
 ```
 
 ### Move to Project Folder
@@ -187,22 +187,25 @@ npm run dev
 Create a `.env` file in the project root and configure the following variables:
 
 ```env
-DATABASE_URL=
+PORT=5000
 
-JWT_ACCESS_SECRET=
-JWT_ACCESS_EXPIRES=7d
+APP_URL="http://localhost:3000"
 
-JWT_REFRESH_SECRET=
-JWT_REFRESH_EXPIRES=30d
+DATABASE_URL="YOUR_DATABASE_URL_HERE"
+
+JWT_ACCESS_SECRET="YOUR_JWT_ACCESS_SECRET"
+
+JWT_ACCESS_EXPIRES_IN="1d"
+
+JWT_REFRESH_SECRET="YOUR_JWT_REFRESH_SECRET"
+
+JWT_REFRESH_EXPIRES_IN="7d"
 
 BCRYPT_SALT_ROUNDS=10
 
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
+STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET_KEY
 
-APP_URL=http://localhost:3000
-
-PORT=5000
+STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
 ```
 
 ---
@@ -404,7 +407,7 @@ https://gearup-backend-eight.vercel.app
 
 **Md. Jahirul Islam Tuku**
 
-GitHub: https://github.com/YOUR_USERNAME
+GitHub: https://github.com/md-jahirul-islam-tuku
 
 ---
 
