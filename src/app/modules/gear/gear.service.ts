@@ -81,13 +81,18 @@ const getAllGears = async (query: Record<string, unknown>) => {
    * GET /api/gears?isAvailable=false
    * => Only Unavailable Gear
    */
-  if (isAvailable === undefined) {
+  if (isAvailable === "true") {
     andConditions.push({
       isAvailable: true,
     });
-  } else {
+  } else if (isAvailable === "false") {
     andConditions.push({
-      isAvailable: isAvailable === "true",
+      isAvailable: false,
+    });
+  } else {
+    // Default
+    andConditions.push({
+      isAvailable: true,
     });
   }
 
