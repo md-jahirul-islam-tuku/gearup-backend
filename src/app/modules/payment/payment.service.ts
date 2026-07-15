@@ -161,7 +161,7 @@ const stripeWebhook = async (rawBody: Buffer, signature: string) => {
         throw new AppError(httpStatus.NOT_FOUND, "Payment not found");
       }
 
-      // একই Webhook একাধিকবার এলে Update না করা
+      // Avoiding updates when the same webhook is received multiple times
       if (payment.status === PaymentStatus.PAID) {
         return;
       }

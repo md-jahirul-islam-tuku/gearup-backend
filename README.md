@@ -83,6 +83,7 @@ https://documenter.getpostman.com/view/51629043/2sBY4Mu1he
 - Payment Status Tracking
 - Transaction ID Storage
 - Payment History
+- **No simulated or fake payment methods are used.**
 
 ---
 
