@@ -49,8 +49,8 @@ const createGear = async (payload: TCreateGear, providerId: string) => {
 
 const getAllGears = async (query: Record<string, unknown>) => {
   const searchTerm = query.searchTerm as string | undefined;
-
   const categoryId = query.categoryId as string | undefined;
+  const brand = query.brand as string | undefined;
 
   const minPrice = query.minPrice ? Number(query.minPrice) : undefined;
 
@@ -61,16 +61,43 @@ const getAllGears = async (query: Record<string, unknown>) => {
   const sortableFields = ["pricePerDay", "createdAt", "stock"] as const;
 
   const sortBy = query.sortBy as string | undefined;
+
   const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
-
-  const brand = query.brand as string | undefined;
-
-  const andConditions: Prisma.GearItemWhereInput[] = [];
 
   // Pagination
   const { page, limit, skip } = calculatePagination(query);
 
-  // Searching
+  const andConditions: Prisma.GearItemWhereInput[] = [];
+
+  /**
+   * Default Behavior
+   * ----------------
+   * GET /api/gears
+   * => Only Available Gear
+   *
+   * GET /api/gears?isAvailable=true
+   * => Only Available Gear
+   *
+   * GET /api/gears?isAvailable=false
+   * => Only Unavailable Gear
+   */
+  if (isAvailable === undefined) {
+    andConditions.push({
+      isAvailable: true,
+    });
+  } else {
+    andConditions.push({
+      isAvailable: isAvailable === "true",
+    });
+  }
+
+  /**
+   * Search
+   * Search by:
+   * - Gear Name
+   * - Brand
+   * - Category Name
+   */
   if (searchTerm) {
     andConditions.push({
       OR: [
@@ -84,6 +111,14 @@ const getAllGears = async (query: Record<string, unknown>) => {
           brand: {
             contains: searchTerm,
             mode: "insensitive",
+          },
+        },
+        {
+          category: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
           },
         },
       ],
@@ -121,19 +156,6 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  // Availability Filter
-  if (isAvailable === "true") {
-    andConditions.push({
-      isAvailable: true,
-    });
-  }
-
-  if (isAvailable === "false") {
-    andConditions.push({
-      isAvailable: false,
-    });
-  }
-
   // Sorting
   let orderBy: Prisma.GearItemOrderByWithRelationInput = {
     createdAt: "desc",
@@ -148,14 +170,14 @@ const getAllGears = async (query: Record<string, unknown>) => {
     };
   }
 
-  const whereConditions: Prisma.GearItemWhereInput =
-    andConditions.length > 0 ? { AND: andConditions } : {};
+  const whereConditions: Prisma.GearItemWhereInput = andConditions.length
+    ? {
+        AND: andConditions,
+      }
+    : {};
 
   const gears = await prisma.gearItem.findMany({
     where: whereConditions,
-
-    skip,
-    take: limit,
 
     include: {
       category: true,
@@ -167,6 +189,9 @@ const getAllGears = async (query: Record<string, unknown>) => {
     },
 
     orderBy,
+
+    skip,
+    take: limit,
   });
 
   const total = await prisma.gearItem.count({
