@@ -1,5 +1,13 @@
 # 🚀 GearUp Backend API
 
+![Node.js](https://img.shields.io/badge/Node.js-24.x-green)
+![Express](https://img.shields.io/badge/Express-5.x-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)
+![Stripe](https://img.shields.io/badge/Stripe-Payment-635BFF)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 A production-ready RESTful Backend API for **GearUp**, a Sports & Outdoor Gear Rental Platform.
 
 This project was developed as a backend assignment using **Node.js, Express.js, TypeScript, PostgreSQL, Prisma ORM, and Stripe**. It provides secure authentication, role-based authorization, gear rental management, Stripe payment integration, reviews, and administrative functionalities.
