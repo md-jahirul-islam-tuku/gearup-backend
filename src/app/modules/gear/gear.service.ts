@@ -8,6 +8,7 @@ import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
 import { Prisma } from "../../../../generated/prisma/client";
 import { TCurrentUser } from "../../types/current-user";
+import { JwtPayload } from "jsonwebtoken";
 
 const createGear = async (payload: TCreateGear, providerId: string) => {
   // Provider exists?
@@ -215,6 +216,111 @@ const getAllGears = async (query: Record<string, unknown>) => {
   };
 };
 
+const getMyGears = async (user: JwtPayload, query: Record<string, unknown>) => {
+  const { page, limit, skip } = calculatePagination(query);
+
+  const searchTerm = query.searchTerm?.toString();
+
+  const category = query.category?.toString();
+
+  const isAvailable = query.isAvailable as string | undefined;
+
+  const sortableFields = ["pricePerDay", "createdAt", "stock"] as const;
+
+  const sortBy = query.sortBy as string | undefined;
+
+  const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+
+  const where: Prisma.GearItemWhereInput = {
+    providerId: user.userId,
+  };
+
+  if (searchTerm) {
+    where.OR = [
+      {
+        name: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+      {
+        brand: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+      {
+        category: {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      },
+    ];
+  }
+
+  if (category) {
+    where.categoryId = category;
+  }
+
+  if (isAvailable === "true") {
+    where.isAvailable = true;
+  }
+
+  if (isAvailable === "false") {
+    where.isAvailable = false;
+  }
+
+  // Sorting
+  let orderBy: Prisma.GearItemOrderByWithRelationInput = {
+    createdAt: "desc",
+  };
+
+  if (
+    sortBy &&
+    sortableFields.includes(sortBy as (typeof sortableFields)[number])
+  ) {
+    orderBy = {
+      [sortBy]: sortOrder,
+    };
+  }
+
+  const [data, total] = await prisma.$transaction([
+    prisma.gearItem.findMany({
+      where,
+
+      include: {
+        category: true,
+        provider: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+
+      orderBy,
+      skip,
+      take: limit,
+    }),
+
+    prisma.gearItem.count({
+      where,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data,
+  };
+};
+
 const getSingleGear = async (id: string) => {
   const gear = await prisma.gearItem.findUnique({
     where: {
@@ -355,6 +461,7 @@ const deleteGear = async (id: string, currentUser: TCurrentUser) => {
 export const GearServices = {
   createGear,
   getAllGears,
+  getMyGears,
   getSingleGear,
   updateGear,
   deleteGear,

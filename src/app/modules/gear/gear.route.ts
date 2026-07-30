@@ -11,6 +11,7 @@ import { GearControllers } from "./gear.controller";
 const router = Router();
 
 router.get("/", GearControllers.getAllGears);
+router.get("/my-gears", auth(Role.PROVIDER), GearControllers.getMyGears);
 router.get("/:id", GearControllers.getSingleGear);
 router.patch(
   "/:id",

@@ -3,6 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { Request, Response } from "express";
 import { GearServices } from "./gear.service";
+import { JwtPayload } from "jsonwebtoken";
 
 const createGear = catchAsync(async (req: Request, res: Response) => {
   const result = await GearServices.createGear(
@@ -23,6 +24,19 @@ const getAllGears = catchAsync(async (req, res) => {
   sendResponse(res, httpStatus.OK, {
     success: true,
     message: "Gears retrieved successfully",
+    data: result,
+  });
+});
+
+const getMyGears = catchAsync(async (req, res) => {
+  const result = await GearServices.getMyGears(
+    req.user as JwtPayload,
+    req.query,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Provider gears retrieved successfully",
     data: result,
   });
 });
@@ -64,6 +78,7 @@ const deleteGear = catchAsync(async (req, res) => {
 export const GearControllers = {
   createGear,
   getAllGears,
+  getMyGears,
   getSingleGear,
   updateGear,
   deleteGear,
