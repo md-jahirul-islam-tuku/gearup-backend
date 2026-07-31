@@ -429,16 +429,13 @@ const updateGear = async (
 
 const deleteGear = async (id: string, currentUser: TCurrentUser) => {
   const gear = await prisma.gearItem.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!gear) {
     throw new AppError(httpStatus.NOT_FOUND, "Gear not found");
   }
 
-  // Authorization
   if (
     currentUser.role !== Role.ADMIN &&
     gear.providerId !== currentUser.userId
@@ -449,11 +446,23 @@ const deleteGear = async (id: string, currentUser: TCurrentUser) => {
     );
   }
 
-  await prisma.gearItem.delete({
-    where: {
-      id,
-    },
-  });
+  try {
+    await prisma.gearItem.delete({
+      where: { id },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "This gear has existing rental orders and cannot be deleted. You may mark it as unavailable instead.",
+      );
+    }
+
+    throw error;
+  }
 
   return null;
 };
