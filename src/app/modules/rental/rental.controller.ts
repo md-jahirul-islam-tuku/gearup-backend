@@ -49,8 +49,7 @@ const getProviderRentals = catchAsync(async (req, res) => {
   sendResponse(res, httpStatus.OK, {
     success: true,
     message: "Provider rental orders retrieved successfully",
-    data: result.data,
-    meta: result.meta,
+    data: result,
   });
 });
 
