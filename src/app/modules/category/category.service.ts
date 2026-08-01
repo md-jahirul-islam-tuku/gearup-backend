@@ -2,6 +2,7 @@ import httpStatus from "http-status";
 import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 import generateSlug from "../../utils/generateSlug";
+import { calculatePagination } from "../../utils/pagination";
 
 const createCategory = async (payload: {
   name: string;
@@ -45,14 +46,46 @@ const createCategory = async (payload: {
   return category;
 };
 
-const getAllCategories = async (_query: Record<string, unknown>) => {
-  const categories = await prisma.category.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+const getAllCategories = async (query: Record<string, unknown>) => {
+  const { page, limit, skip } = calculatePagination(query);
+  const searchTerm = query.searchTerm as string | undefined;
 
-  return categories;
+  const whereClause = searchTerm
+    ? {
+        name: {
+          contains: searchTerm,
+          mode: "insensitive" as const,
+        },
+      }
+    : {};
+
+  const [categories, total] = await prisma.$transaction([
+    prisma.category.findMany({
+      where: whereClause,
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.category.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: categories,
+  };
 };
 
 const getSingleCategory = async (id: string) => {
