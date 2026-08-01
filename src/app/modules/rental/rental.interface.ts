@@ -9,4 +9,5 @@ export type TGetMyRentalsQuery = {
   page?: string;
   limit?: string;
   status?: string;
+  searchTerm?: string;
 };

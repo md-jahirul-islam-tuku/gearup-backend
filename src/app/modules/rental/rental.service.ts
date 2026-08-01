@@ -5,6 +5,7 @@ import { TCreateRental, TGetMyRentalsQuery } from "./rental.interface";
 import { RentalStatus, Role } from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
 import { TCurrentUser } from "../../types/current-user";
+import { Prisma } from "../../../../generated/prisma/client";
 
 const createRental = async (payload: TCreateRental, userId: string) => {
   const gear = await prisma.gearItem.findUnique({
@@ -233,12 +234,44 @@ const getProviderRentals = async (
   const limit = Number(query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  const whereClause = {
+  const searchTerm = query.searchTerm?.trim();
+
+  const whereClause: Prisma.RentalOrderWhereInput = {
     gearItem: {
       providerId,
     },
+
     ...(query.status && {
       status: query.status as RentalStatus,
+    }),
+
+    ...(searchTerm && {
+      OR: [
+        {
+          customer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          customer: {
+            email: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          gearItem: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+        },
+      ],
     }),
   };
 
@@ -291,7 +324,6 @@ const getProviderRentals = async (
     data: rentals,
   };
 };
-
 const updateRentalStatus = async (
   rentalId: string,
   status: RentalStatus,
