@@ -50,38 +50,20 @@ const createGear = async (payload: TCreateGear, providerId: string) => {
 
 const getAllGears = async (query: Record<string, unknown>) => {
   const searchTerm = query.searchTerm as string | undefined;
-  const categoryId = query.categoryId as string | undefined;
+  const category = query.category as string | undefined;
   const brand = query.brand as string | undefined;
 
   const minPrice = query.minPrice ? Number(query.minPrice) : undefined;
-
   const maxPrice = query.maxPrice ? Number(query.maxPrice) : undefined;
 
   const isAvailable = query.isAvailable as string | undefined;
-
-  const sortableFields = ["pricePerDay", "createdAt", "stock"] as const;
-
-  const sortBy = query.sortBy as string | undefined;
-
-  const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
 
   // Pagination
   const { page, limit, skip } = calculatePagination(query);
 
   const andConditions: Prisma.GearItemWhereInput[] = [];
 
-  /**
-   * Default Behavior
-   * ----------------
-   * GET /api/gears
-   * => Only Available Gear
-   *
-   * GET /api/gears?isAvailable=true
-   * => Only Available Gear
-   *
-   * GET /api/gears?isAvailable=false
-   * => Only Unavailable Gear
-   */
+  // Availability filter
   if (isAvailable === "true") {
     andConditions.push({
       isAvailable: true,
@@ -97,13 +79,7 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  /**
-   * Search
-   * Search by:
-   * - Gear Name
-   * - Brand
-   * - Category Name
-   */
+  // Search
   if (searchTerm) {
     andConditions.push({
       OR: [
@@ -142,13 +118,18 @@ const getAllGears = async (query: Record<string, unknown>) => {
   }
 
   // Category Filter
-  if (categoryId) {
+  if (category) {
     andConditions.push({
-      categoryId,
+      category: {
+        name: {
+          equals: category,
+          mode: "insensitive",
+        },
+      },
     });
   }
 
-  // Price Range Filter
+  // Price filter
   if (minPrice !== undefined || maxPrice !== undefined) {
     andConditions.push({
       pricePerDay: {
@@ -162,31 +143,67 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
+  // --------------------------------
   // Sorting
+  // --------------------------------
+
+  const sortableFields = [
+    "pricePerDay",
+    "createdAt",
+    "stock",
+    "category",
+    "availabilityDate",
+  ] as const;
+
+  type SortableField = (typeof sortableFields)[number];
+
+  const sortBy = query.sortBy as string | undefined;
+
+  const sortOrder: Prisma.SortOrder =
+    query.sortOrder === "asc" ? "asc" : "desc";
+
   let orderBy: Prisma.GearItemOrderByWithRelationInput = {
     createdAt: "desc",
   };
 
-  if (
-    sortBy &&
-    sortableFields.includes(sortBy as (typeof sortableFields)[number])
-  ) {
-    orderBy = {
-      [sortBy]: sortOrder,
-    };
+  if (sortBy && sortableFields.includes(sortBy as SortableField)) {
+    switch (sortBy) {
+      case "category":
+        orderBy = {
+          category: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      default:
+        orderBy = {
+          [sortBy]: sortOrder,
+        };
+    }
   }
 
-  const whereConditions: Prisma.GearItemWhereInput = andConditions.length
-    ? {
-        AND: andConditions,
-      }
-    : {};
+  // --------------------------------
+  // Where
+  // --------------------------------
+
+  const whereConditions: Prisma.GearItemWhereInput =
+    andConditions.length > 0
+      ? {
+          AND: andConditions,
+        }
+      : {};
+
+  // --------------------------------
+  // Query
+  // --------------------------------
 
   const gears = await prisma.gearItem.findMany({
     where: whereConditions,
 
     include: {
       category: true,
+
       provider: {
         omit: {
           password: true,
