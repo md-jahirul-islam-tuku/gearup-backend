@@ -13,4 +13,6 @@ router.get("/gear", auth(Role.ADMIN), AdminControllers.getAllGear);
 
 router.get("/rentals", auth(Role.ADMIN), AdminControllers.getAllRentals);
 
+router.get("/payments", auth(Role.ADMIN), AdminControllers.getAllPayments);
+
 export const AdminRoutes = router;

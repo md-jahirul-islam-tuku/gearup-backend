@@ -51,9 +51,20 @@ const getAllRentals = catchAsync(async (req, res) => {
   });
 });
 
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminServices.getAllPayments(req.query);
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Payments retrieved successfully",
+    data: result,
+  });
+});
+
 export const AdminControllers = {
   getAllUsers,
   updateUserStatus,
   getAllGear,
   getAllRentals,
+  getAllPayments,
 };

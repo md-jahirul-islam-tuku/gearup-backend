@@ -4,15 +4,20 @@ import {
   TAdminGearQuery,
   TAdminQuery,
   TAdminRentalQuery,
+  TGetAllPaymentsQuery,
   TUpdateUserStatus,
 } from "./admin.interface";
-import { Prisma, Role, UserStatus } from "../../../../generated/prisma/client";
+import {
+  PaymentStatus,
+  Prisma,
+  Role,
+  UserStatus,
+} from "../../../../generated/prisma/client";
 import AppError from "../../errors/AppError";
+import { calculatePagination } from "../../utils/pagination";
 
 const getAllUsers = async (query: TAdminQuery) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = calculatePagination(query);
 
   const where: Prisma.UserWhereInput = {};
 
@@ -123,9 +128,7 @@ const updateUserStatus = async (
 };
 
 const getAllGear = async (query: TAdminGearQuery) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = calculatePagination(query);
 
   const where: Prisma.GearItemWhereInput = {};
 
@@ -198,9 +201,7 @@ const getAllGear = async (query: TAdminGearQuery) => {
 };
 
 const getAllRentals = async (query: TAdminRentalQuery) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = calculatePagination(query);
 
   const where: Prisma.RentalOrderWhereInput = {};
 
@@ -259,9 +260,99 @@ const getAllRentals = async (query: TAdminRentalQuery) => {
   };
 };
 
+const getAllPayments = async (query: TGetAllPaymentsQuery) => {
+  const { page, limit, skip } = calculatePagination(query);
+
+  const searchTerm = query.searchTerm?.trim();
+
+  const whereClause: Prisma.PaymentWhereInput = {
+    ...(query.status && {
+      status: query.status as PaymentStatus,
+    }),
+
+    ...(searchTerm && {
+      OR: [
+        {
+          transactionId: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          rentalOrder: {
+            customer: {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+        {
+          rentalOrder: {
+            customer: {
+              email: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+      ],
+    }),
+  };
+
+  const [payments, total] = await prisma.$transaction([
+    prisma.payment.findMany({
+      where: whereClause,
+
+      include: {
+        rentalOrder: {
+          include: {
+            customer: {
+              omit: {
+                password: true,
+              },
+            },
+
+            gearItem: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        },
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      skip,
+      take: limit,
+    }),
+
+    prisma.payment.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+
+    data: payments,
+  };
+};
+
 export const AdminServices = {
   getAllUsers,
   updateUserStatus,
   getAllGear,
   getAllRentals,
+  getAllPayments,
 };

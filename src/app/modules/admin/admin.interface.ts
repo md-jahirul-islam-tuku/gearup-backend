@@ -26,3 +26,10 @@ export type TAdminRentalQuery = {
   limit?: string;
   status?: RentalStatus;
 };
+
+export type TGetAllPaymentsQuery = {
+  page?: string;
+  limit?: string;
+  searchTerm?: string;
+  status?: string;
+};
