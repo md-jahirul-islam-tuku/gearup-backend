@@ -4,7 +4,11 @@ import { prisma } from "../../config/prisma";
 import AppError from "../../errors/AppError";
 
 import { TCreateGear, TUpdateGear } from "./gear.interface";
-import { Role, UserStatus } from "../../../../generated/prisma/enums";
+import {
+  RentalStatus,
+  Role,
+  UserStatus,
+} from "../../../../generated/prisma/enums";
 import { calculatePagination } from "../../utils/pagination";
 import { Prisma } from "../../../../generated/prisma/client";
 import { TCurrentUser } from "../../types/current-user";
@@ -50,36 +54,64 @@ const createGear = async (payload: TCreateGear, providerId: string) => {
 
 const getAllGears = async (query: Record<string, unknown>) => {
   const searchTerm = query.searchTerm as string | undefined;
+
   const category = query.category as string | undefined;
+
   const brand = query.brand as string | undefined;
 
   const minPrice = query.minPrice ? Number(query.minPrice) : undefined;
+
   const maxPrice = query.maxPrice ? Number(query.maxPrice) : undefined;
 
-  const isAvailable = query.isAvailable as string | undefined;
+  const startDate = query.startDate
+    ? new Date(query.startDate as string)
+    : undefined;
 
-  // Pagination
-  const { page, limit, skip } = calculatePagination(query);
+  const endDate = query.endDate ? new Date(query.endDate as string) : undefined;
 
-  const andConditions: Prisma.GearItemWhereInput[] = [];
+  const sortBy = query.sortBy as string | undefined;
 
-  // Availability filter
-  if (isAvailable === "true") {
-    andConditions.push({
-      isAvailable: true,
-    });
-  } else if (isAvailable === "false") {
-    andConditions.push({
-      isAvailable: false,
-    });
-  } else {
-    // Default
-    andConditions.push({
-      isAvailable: true,
-    });
+  const sortOrder: Prisma.SortOrder =
+    query.sortOrder === "asc" ? "asc" : "desc";
+
+  if (minPrice !== undefined && (Number.isNaN(minPrice) || minPrice < 0)) {
+    throw new Error("Invalid minPrice");
   }
 
-  // Search
+  if (maxPrice !== undefined && (Number.isNaN(maxPrice) || maxPrice < 0)) {
+    throw new Error("Invalid maxPrice");
+  }
+
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    throw new Error("minPrice cannot be greater than maxPrice");
+  }
+
+  if (
+    (startDate && Number.isNaN(startDate.getTime())) ||
+    (endDate && Number.isNaN(endDate.getTime()))
+  ) {
+    throw new Error("Invalid startDate or endDate");
+  }
+
+  // Both dates are required for availability search
+  if ((startDate && !endDate) || (!startDate && endDate)) {
+    throw new Error(
+      "Both startDate and endDate are required for availability search",
+    );
+  }
+
+  if (startDate && endDate && startDate > endDate) {
+    throw new Error("startDate cannot be greater than endDate");
+  }
+
+  const { page, limit } = calculatePagination(query);
+
+  const andConditions: Prisma.GearItemWhereInput[] = [
+    {
+      isAvailable: true,
+    },
+  ];
+
   if (searchTerm) {
     andConditions.push({
       OR: [
@@ -89,12 +121,14 @@ const getAllGears = async (query: Record<string, unknown>) => {
             mode: "insensitive",
           },
         },
+
         {
           brand: {
             contains: searchTerm,
             mode: "insensitive",
           },
         },
+
         {
           category: {
             name: {
@@ -107,7 +141,6 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  // Brand Filter
   if (brand) {
     andConditions.push({
       brand: {
@@ -117,7 +150,6 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  // Category Filter
   if (category) {
     andConditions.push({
       category: {
@@ -129,13 +161,13 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  // Price filter
   if (minPrice !== undefined || maxPrice !== undefined) {
     andConditions.push({
       pricePerDay: {
         ...(minPrice !== undefined && {
           gte: minPrice,
         }),
+
         ...(maxPrice !== undefined && {
           lte: maxPrice,
         }),
@@ -143,60 +175,47 @@ const getAllGears = async (query: Record<string, unknown>) => {
     });
   }
 
-  // --------------------------------
-  // Sorting
-  // --------------------------------
+  const whereConditions: Prisma.GearItemWhereInput = {
+    AND: andConditions,
+  };
 
-  const sortableFields = [
-    "pricePerDay",
-    "createdAt",
-    "stock",
-    "category",
-    "availabilityDate",
-  ] as const;
-
-  type SortableField = (typeof sortableFields)[number];
-
-  const sortBy = query.sortBy as string | undefined;
-
-  const sortOrder: Prisma.SortOrder =
-    query.sortOrder === "asc" ? "asc" : "desc";
-
+  // eslint-disable-next-line no-useless-assignment
   let orderBy: Prisma.GearItemOrderByWithRelationInput = {
     createdAt: "desc",
   };
 
-  if (sortBy && sortableFields.includes(sortBy as SortableField)) {
-    switch (sortBy) {
-      case "category":
-        orderBy = {
-          category: {
-            name: sortOrder,
-          },
-        };
-        break;
+  switch (sortBy) {
+    case "pricePerDay":
+      orderBy = {
+        pricePerDay: sortOrder,
+      };
+      break;
 
-      default:
-        orderBy = {
-          [sortBy]: sortOrder,
-        };
-    }
+    case "createdAt":
+      orderBy = {
+        createdAt: sortOrder,
+      };
+      break;
+
+    case "stock":
+      orderBy = {
+        stock: sortOrder,
+      };
+      break;
+
+    case "category":
+      orderBy = {
+        category: {
+          name: sortOrder,
+        },
+      };
+      break;
+
+    default:
+      orderBy = {
+        createdAt: "desc",
+      };
   }
-
-  // --------------------------------
-  // Where
-  // --------------------------------
-
-  const whereConditions: Prisma.GearItemWhereInput =
-    andConditions.length > 0
-      ? {
-          AND: andConditions,
-        }
-      : {};
-
-  // --------------------------------
-  // Query
-  // --------------------------------
 
   const gears = await prisma.gearItem.findMany({
     where: whereConditions,
@@ -212,24 +231,89 @@ const getAllGears = async (query: Record<string, unknown>) => {
     },
 
     orderBy,
-
-    skip,
-    take: limit,
   });
 
-  const total = await prisma.gearItem.count({
-    where: whereConditions,
-  });
+  let availableGears = gears;
+
+  if (startDate && endDate) {
+    // These statuses consume/block stock.
+    const reservingStatuses: RentalStatus[] = [
+      RentalStatus.PLACED,
+      RentalStatus.CONFIRMED,
+      RentalStatus.PICKED_UP,
+    ];
+
+    const rentals = await prisma.rentalOrder.findMany({
+      where: {
+        gearItemId: {
+          in: gears.map((gear) => gear.id),
+        },
+
+        startDate: {
+          lte: endDate,
+        },
+
+        endDate: {
+          gte: startDate,
+        },
+
+        status: {
+          in: reservingStatuses,
+        },
+      },
+
+      select: {
+        gearItemId: true,
+        quantity: true,
+      },
+    });
+
+    const rentedQuantityMap = new Map<string, number>();
+
+    for (const rental of rentals) {
+      const currentQuantity = rentedQuantityMap.get(rental.gearItemId) ?? 0;
+
+      rentedQuantityMap.set(
+        rental.gearItemId,
+        currentQuantity + rental.quantity,
+      );
+    }
+
+    availableGears = gears
+      .map((gear) => {
+        const rentedQuantity = rentedQuantityMap.get(gear.id) ?? 0;
+
+        const availableStock = gear.stock - rentedQuantity;
+
+        return {
+          ...gear,
+
+          availableStock,
+
+          isAvailable: availableStock > 0,
+        };
+      })
+
+      .filter((gear) => gear.availableStock > 0);
+  }
+
+  const total = availableGears.length;
+
+  const totalPage = Math.ceil(total / limit);
+
+  const skip = (page - 1) * limit;
+
+  const paginatedGears = availableGears.slice(skip, skip + limit);
 
   return {
     meta: {
       page,
       limit,
       total,
-      totalPage: Math.ceil(total / limit),
+      totalPage,
     },
 
-    data: gears,
+    data: paginatedGears,
   };
 };
 
