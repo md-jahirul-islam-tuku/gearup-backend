@@ -38,4 +38,6 @@ router.patch(
   RentalControllers.updateRentalStatus,
 );
 
+router.post("/:id", auth(Role.CUSTOMER), RentalControllers.cancelRental);
+
 export const RentalRoutes = router;

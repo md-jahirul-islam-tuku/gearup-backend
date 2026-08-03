@@ -67,10 +67,28 @@ const updateRentalStatus = catchAsync(async (req, res) => {
   });
 });
 
+const cancelRental = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const userId = req.user?.userId;
+
+  const result = await RentalServices.cancelRental(
+    id as string,
+    userId as string,
+  );
+
+  sendResponse(res, httpStatus.OK, {
+    success: true,
+    message: "Rental cancelled successfully",
+    data: result,
+  });
+});
+
 export const RentalControllers = {
   createRental,
   getMyRentals,
   getSingleRental,
   getProviderRentals,
   updateRentalStatus,
+  cancelRental,
 };

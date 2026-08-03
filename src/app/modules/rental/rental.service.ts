@@ -324,6 +324,7 @@ const getProviderRentals = async (
     data: rentals,
   };
 };
+
 const updateRentalStatus = async (
   rentalId: string,
   status: RentalStatus,
@@ -454,10 +455,43 @@ const updateRentalStatus = async (
   return updatedRental;
 };
 
+const cancelRental = async (rentalId: string, userId: string) => {
+  const rental = await prisma.rentalOrder.findUnique({
+    where: {
+      id: rentalId,
+    },
+  });
+
+  if (!rental) {
+    throw new Error("Rental not found");
+  }
+
+  if (rental.customerId !== userId) {
+    throw new Error("You are not allowed to cancel this rental");
+  }
+
+  if (rental.status !== "PLACED") {
+    throw new Error(`Rental cannot be cancelled from ${rental.status} status`);
+  }
+
+  const result = await prisma.rentalOrder.update({
+    where: {
+      id: rentalId,
+    },
+
+    data: {
+      status: "CANCELLED",
+    },
+  });
+
+  return result;
+};
+
 export const RentalServices = {
   createRental,
   getMyRentals,
   getSingleRental,
   getProviderRentals,
   updateRentalStatus,
+  cancelRental,
 };
